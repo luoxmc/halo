@@ -7,9 +7,11 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import run.halo.app.config.properties.HaloProperties;
+import run.halo.app.exception.NotFoundException;
 import run.halo.app.exception.ServiceException;
 import run.halo.app.model.entity.User;
 import run.halo.app.model.properties.BlogProperties;
+import run.halo.app.model.properties.PrimaryProperties;
 import run.halo.app.model.support.HaloConst;
 import run.halo.app.service.OptionService;
 import run.halo.app.service.UserService;
@@ -48,11 +50,9 @@ public class MainController {
     }
 
     @GetMapping("${halo.admin-path:admin}")
-    public void admin(HttpServletResponse response) throws IOException {
-        String adminIndexRedirectUri =
-            HaloUtils.ensureBoth(haloProperties.getAdminPath(), HaloUtils.URL_SEPARATOR)
-                + INDEX_REDIRECT_URI;
-        response.sendRedirect(adminIndexRedirectUri);
+    public String admin() throws IOException {
+        return HaloUtils.ensureBoth(haloProperties.getAdminPath(), HaloUtils.URL_SEPARATOR)
+            + INDEX_REDIRECT_URI;
     }
 
     @GetMapping("version")
@@ -62,11 +62,15 @@ public class MainController {
     }
 
     @GetMapping("install")
-    public void installation(HttpServletResponse response) throws IOException {
-        String installRedirectUri =
-            StringUtils.appendIfMissing(this.haloProperties.getAdminPath(), "/")
+    public String installation() throws IOException {
+        boolean isInstalled = optionService
+            .getByPropertyOrDefault(PrimaryProperties.IS_INSTALLED, Boolean.class, false);
+        if (!isInstalled) {
+            return StringUtils.appendIfMissing(this.haloProperties.getAdminPath(), "/")
                 + INSTALL_REDIRECT_URI;
-        response.sendRedirect(installRedirectUri);
+        } else {
+            throw new NotFoundException("404");
+        }
     }
 
     @GetMapping("avatar")

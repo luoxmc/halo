@@ -142,14 +142,15 @@ public class QiniuOssFileHandler implements FileHandler {
             result.setMediaType(MediaType.valueOf(Objects.requireNonNull(file.getContentType())));
             result.setSize(file.getSize());
 
-            if (isImageType(file)) {
+            // Handle thumbnail
+            handleImageMetadata(file, result, () -> {
                 if (ImageUtils.EXTENSION_ICO.equals(pathDescriptor.getExtension())) {
-                    result.setThumbPath(fullPath);
+                    return fullPath;
                 } else {
-                    result.setThumbPath(StringUtils.isBlank(thumbnailStyleRule) ? fullPath :
-                        fullPath + thumbnailStyleRule);
+                    return StringUtils.isBlank(thumbnailStyleRule) ? fullPath :
+                        fullPath + thumbnailStyleRule;
                 }
-            }
+            });
 
             return result;
         } catch (IOException e) {
@@ -190,7 +191,9 @@ public class QiniuOssFileHandler implements FileHandler {
             }
         } catch (QiniuException e) {
             log.error("Qiniu oss error response: [{}]", e.response);
-            throw new FileOperationException("附件 " + key + " 从七牛云删除失败", e);
+            if (e.response.statusCode != 612) {
+                throw new FileOperationException("附件 " + key + " 从七牛云删除失败", e);
+            }
         }
     }
 
